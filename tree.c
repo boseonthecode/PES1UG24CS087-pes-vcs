@@ -154,7 +154,13 @@ static int write_tree_level(IndexEntry *entries, int count, size_t path_offset, 
             tree.count++;
             i = j;
         } else {
-            // File population (Phase 2.4) will go here
+            // File population (Phase 2.4)
+            te->mode = entries[i].mode;
+            memcpy(te->hash.hash, entries[i].hash.hash, HASH_SIZE);
+            size_t name_len = strlen(name);
+            memcpy(te->name, name, name_len);
+            te->name[name_len] = '\0';
+            
             tree.count++;
             i++;
         }
