@@ -119,6 +119,12 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 // Forward declaration
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
 
+// Workaround to allow test_tree to link without index.o
+__attribute__((weak)) int index_load(Index *index) {
+    (void)index;
+    return -1;
+}
+
 // path_offset is the character index where the current tree level's names begin.
 static int write_tree_level(IndexEntry *entries, int count, size_t path_offset, ObjectID *id_out) {
     Tree tree;
