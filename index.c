@@ -24,6 +24,9 @@
 #include <unistd.h>
 #include <dirent.h>
 
+// Forward declaration
+int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
+
 // ─── PROVIDED ────────────────────────────────────────────────────────────────
 
 // Find an index entry by path (linear scan).
@@ -179,37 +182,43 @@ static int compare_index_entries(const void *a, const void *b) {
 }
 
 int index_save(const Index *index) {
-    Index sorted_index = *index;
-    qsort(sorted_index.entries, sorted_index.count, sizeof(IndexEntry), compare_index_entries);
+    Index *sorted_index = malloc(sizeof(Index));
+    if (!sorted_index) return -1;
+    *sorted_index = *index;
+    qsort(sorted_index->entries, sorted_index->count, sizeof(IndexEntry), compare_index_entries);
 
     char tmp_path[512];
     snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", INDEX_FILE);
     
     FILE *f = fopen(tmp_path, "w");
-    if (!f) return -1;
-
-    for (int i = 0; i < sorted_index.count; i++) {
-        char hash_hex[HASH_HEX_SIZE + 1];
-        hash_to_hex(&sorted_index.entries[i].hash, hash_hex);
-        
-        fprintf(f, "%06o %s %llu %u %s\n",
-                sorted_index.entries[i].mode,
-                hash_hex,
-                (unsigned long long)sorted_index.entries[i].mtime_sec,
-                sorted_index.entries[i].size,
-                sorted_index.entries[i].path);
+    if (!f) {
+        free(sorted_index);
+        return -1;
     }
 
-    // Phase 3.3 will handle fsync and atomic rename
+    for (int i = 0; i < sorted_index->count; i++) {
+        char hash_hex[HASH_HEX_SIZE + 1];
+        hash_to_hex(&sorted_index->entries[i].hash, hash_hex);
+        
+        fprintf(f, "%06o %s %llu %u %s\n",
+                sorted_index->entries[i].mode,
+                hash_hex,
+                (unsigned long long)sorted_index->entries[i].mtime_sec,
+                sorted_index->entries[i].size,
+                sorted_index->entries[i].path);
+    }
+
     fflush(f);
     fsync(fileno(f));
     fclose(f);
     
     if (rename(tmp_path, INDEX_FILE) < 0) {
         unlink(tmp_path);
+        free(sorted_index);
         return -1;
     }
     
+    free(sorted_index);
     return 0;
 }
 
@@ -253,7 +262,20 @@ int index_add(Index *index, const char *path) {
     }
     free(data);
 
-    // Phase 3.5 will handle updating the index entry
+    struct stat st;
+    if (stat(path, &st) != 0) return -1;
     
-    return -1; // To be replaced in 3.5
+    IndexEntry *entry = index_find(index, path);
+    if (!entry) {
+        if (index->count >= MAX_INDEX_ENTRIES) return -1;
+        entry = &index->entries[index->count++];
+        snprintf(entry->path, sizeof(entry->path), "%s", path);
+    }
+    
+    entry->mode = (st.st_mode & S_IXUSR) ? 0100755 : 0100644;
+    entry->mtime_sec = st.st_mtime;
+    entry->size = st.st_size;
+    memcpy(entry->hash.hash, blob_id.hash, HASH_SIZE);
+    
+    return index_save(index);
 }
