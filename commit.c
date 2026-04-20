@@ -205,7 +205,12 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
         c.has_parent = 0;
     }
 
-    // Phase 4.2 will handle metadata population
+    // Phase 4.2: metadata population
+    snprintf(c.author, sizeof(c.author), "%s", pes_author());
+    c.timestamp = (uint64_t)time(NULL);
+    snprintf(c.message, sizeof(c.message), "%s", message);
+
+    // Phase 4.3: serialization
     
     return -1;
 }
