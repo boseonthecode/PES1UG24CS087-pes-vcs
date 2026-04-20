@@ -142,7 +142,15 @@ static int write_tree_level(IndexEntry *entries, int count, size_t path_offset, 
                 }
             }
             
-            // Subdirectory traversal (Phase 2.3) will go here
+            // Subdirectory traversal (Phase 2.3)
+            te->mode = MODE_DIR;
+            memcpy(te->name, name, dir_len);
+            te->name[dir_len] = '\0';
+            
+            if (write_tree_level(&entries[i], j - i, path_offset + dir_len + 1, &te->hash) != 0) {
+                return -1;
+            }
+            
             tree.count++;
             i = j;
         } else {
