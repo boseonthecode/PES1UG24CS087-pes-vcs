@@ -119,15 +119,38 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 // Forward declaration
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
 
-// depth is the number of path segments we are deep into the directory tree.
-// For the root, depth is 0.
-static int write_tree_level(IndexEntry *entries, int count, int depth, ObjectID *id_out) {
-    (void)entries; (void)count; (void)depth;
-    
+// path_offset is the character index where the current tree level's names begin.
+static int write_tree_level(IndexEntry *entries, int count, size_t path_offset, ObjectID *id_out) {
     Tree tree;
     tree.count = 0;
     
-    // We will build the tree here
+    int i = 0;
+    while (i < count && tree.count < MAX_TREE_ENTRIES) {
+        TreeEntry *te = &tree.entries[tree.count];
+        const char *name = entries[i].path + path_offset;
+        char *slash = strchr(name, '/');
+        
+        if (slash) {
+            size_t dir_len = slash - name;
+            int j = i + 1;
+            while (j < count) {
+                const char *j_name = entries[j].path + path_offset;
+                if (strncmp(name, j_name, dir_len + 1) == 0) {
+                    j++;
+                } else {
+                    break;
+                }
+            }
+            
+            // Subdirectory traversal (Phase 2.3) will go here
+            tree.count++;
+            i = j;
+        } else {
+            // File population (Phase 2.4) will go here
+            tree.count++;
+            i++;
+        }
+    }
     
     void *data;
     size_t len;
