@@ -211,6 +211,11 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     snprintf(c.message, sizeof(c.message), "%s", message);
 
     // Phase 4.3: serialization
+    void *data;
+    size_t len;
+    if (commit_serialize(&c, &data, &len) != 0) return -1;
+
+    // Phase 4.4: object write
     
     return -1;
 }
