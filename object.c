@@ -226,7 +226,25 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
         return -1;
     }
 
-    // verification will go here
+    ObjectID computed_id;
+    compute_hash(full_data, file_size, &computed_id);
 
-    return -1;
+    if (memcmp(computed_id.hash, id->hash, HASH_SIZE) != 0) {
+        free(full_data);
+        return -1;
+    }
+
+    size_t header_len = (null_byte - full_data) + 1;
+    *len_out = file_size - header_len;
+    
+    *data_out = malloc(*len_out);
+    if (!*data_out) {
+        free(full_data);
+        return -1;
+    }
+    
+    memcpy(*data_out, full_data + header_len, *len_out);
+    free(full_data);
+
+    return 0;
 }
