@@ -201,9 +201,16 @@ int index_save(const Index *index) {
     }
 
     // Phase 3.3 will handle fsync and atomic rename
-    
+    fflush(f);
+    fsync(fileno(f));
     fclose(f);
-    return -1; // To be replaced in 3.3
+    
+    if (rename(tmp_path, INDEX_FILE) < 0) {
+        unlink(tmp_path);
+        return -1;
+    }
+    
+    return 0;
 }
 
 // Stage a file for the next commit.
