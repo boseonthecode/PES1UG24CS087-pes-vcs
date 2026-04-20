@@ -174,11 +174,36 @@ int index_load(Index *index) {
 //   - rename                           : atomically moving the temp file over the old index
 //
 // Returns 0 on success, -1 on error.
+static int compare_index_entries(const void *a, const void *b) {
+    return strcmp(((const IndexEntry *)a)->path, ((const IndexEntry *)b)->path);
+}
+
 int index_save(const Index *index) {
-    // TODO: Implement atomic index saving
-    // (See Lab Appendix for logical steps)
-    (void)index;
-    return -1;
+    Index sorted_index = *index;
+    qsort(sorted_index.entries, sorted_index.count, sizeof(IndexEntry), compare_index_entries);
+
+    char tmp_path[512];
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", INDEX_FILE);
+    
+    FILE *f = fopen(tmp_path, "w");
+    if (!f) return -1;
+
+    for (int i = 0; i < sorted_index.count; i++) {
+        char hash_hex[HASH_HEX_SIZE + 1];
+        hash_to_hex(&sorted_index.entries[i].hash, hash_hex);
+        
+        fprintf(f, "%06o %s %llu %u %s\n",
+                sorted_index.entries[i].mode,
+                hash_hex,
+                (unsigned long long)sorted_index.entries[i].mtime_sec,
+                sorted_index.entries[i].size,
+                sorted_index.entries[i].path);
+    }
+
+    // Phase 3.3 will handle fsync and atomic rename
+    
+    fclose(f);
+    return -1; // To be replaced in 3.3
 }
 
 // Stage a file for the next commit.
