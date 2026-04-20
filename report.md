@@ -1,7 +1,7 @@
 # PES-VCS Lab Report
 
 **Author:** PES1UG24CS087  
-**Platform:** Ubuntu 22.04  
+**Platform:** Fedora 
 
 ---
 
