@@ -223,6 +223,5 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     free(data);
 
     // Phase 4.5: head update
-    
-    return -1;
+    return head_update(commit_id_out);
 }
